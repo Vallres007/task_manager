@@ -49,6 +49,14 @@ class CircleProgress(QWidget):
         self._opacity = value
         self.setWindowOpacity(self._opacity)
 
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.activateWindow()
+
+    def focusOutEvent(self, event):
+        super().focusOutEvent(event)
+        self.hide()
+
     def percentage_to_color(self, percentage):
         green_component = 255 - int(2.55 * percentage)
         red_component = int(2.55 * percentage)
@@ -127,7 +135,7 @@ class CircleProgress(QWidget):
 class SystemTrayApp(QSystemTrayIcon):
     def __init__(self, icon, parent=None):
         super(SystemTrayApp, self).__init__(icon, parent)
-        self.widget = CircleProgress()
+        self.widget = None  # Don't create the widget yet
         menu = QMenu(parent)
 
         exit_action = menu.addAction("Exit")
@@ -143,21 +151,34 @@ class SystemTrayApp(QSystemTrayIcon):
 
     def on_tray_icon_activated(self, reason):
         if reason == QSystemTrayIcon.Trigger:
-            if self.widget.isVisible():
-                self.widget.hide()
+            if self.widget is not None:
+                if self.widget.isVisible():
+                    # If the widget is already visible but not active, bring it to the front
+                    if not self.widget.isActiveWindow():
+                        self.widget.activateWindow()
+                    else:
+                        self.widget.hide()
+                else:
+                    self.widget.showNormal()  # This ensures the window is restored and focused if minimized
+                    self.widget.activateWindow()
             else:
+                self.widget = CircleProgress()
                 tray_geometry = self.geometry()
                 x_position = (
                     tray_geometry.x() - self.widget.width() + tray_geometry.width()
                 )
                 y_position = tray_geometry.y() - self.widget.height()
                 self.widget.move(x_position, y_position)
-                self.widget.show()
+                self.widget.showNormal()
+                self.widget.activateWindow()
 
     def update_stats(self):
         cpu_usage = psutil.cpu_percent(interval=1)
         ram_usage = psutil.virtual_memory().percent
-        self.widget.setValues(cpu_usage, ram_usage)
+
+        # Check if widget exists before setting values
+        if self.widget is not None:
+            self.widget.setValues(cpu_usage, ram_usage)
 
         tooltip_text = f"CPU: {cpu_usage}%\nRAM: {ram_usage}%"
         self.setToolTip(tooltip_text)
