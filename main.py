@@ -3,7 +3,7 @@ import psutil
 import winreg
 from PyQt5.QtWidgets import QApplication, QSystemTrayIcon, QMenu, QWidget, QVBoxLayout
 from PyQt5.QtGui import QPainter, QBrush, QColor, QIcon, QPen
-from PyQt5.QtCore import Qt, QTimer, QRect
+from PyQt5.QtCore import Qt, QTimer, QRect, QEvent
 from PyQt5.QtCore import QPropertyAnimation
 from PyQt5.QtCore import pyqtProperty
 
@@ -35,10 +35,11 @@ class CircleProgress(QWidget):
 
         # Animation setup for fade-in
         self.animation = QPropertyAnimation(self, b"opacity")
-        self.animation.setDuration(500)  # 500 ms duration
+        self.animation.setDuration(0)  # 500 ms duration
         self.animation.setStartValue(0)
         self.animation.setEndValue(1)
         self.animation.start()
+        self.installEventFilter(self)
 
     @pyqtProperty(float)
     def opacity(self):
@@ -56,6 +57,14 @@ class CircleProgress(QWidget):
     def focusOutEvent(self, event):
         super().focusOutEvent(event)
         self.hide()
+
+    def eventFilter(self, source, event):
+        # Override the eventFilter method to listen for specific events
+        if event.type() == QEvent.WindowDeactivate:
+            # When the widget is deactivated (loses focus), hide it
+            self.hide()
+            return True
+        return super().eventFilter(source, event)
 
     def percentage_to_color(self, percentage):
         green_component = 255 - int(2.55 * percentage)
