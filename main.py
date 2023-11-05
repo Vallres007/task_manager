@@ -80,83 +80,88 @@ class CircleProgress(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
 
-        # Determine the background color based on the system's dark mode setting
+        # Background color
         if is_windows_dark_mode():
-            bgColor = QColor(35, 39, 43)  # Black for dark mode
-            textColor = QColor(255, 255, 255)  # White text for dark mode
+            bgColor = QColor(35, 39, 43)
+            textColor = QColor(255, 255, 255)
         else:
-            bgColor = QColor(255, 255, 255)  # White for light mode
-            textColor = QColor(0, 0, 0)  # Black text for light mode
+            bgColor = QColor(255, 255, 255)
+            textColor = QColor(0, 0, 0)
 
         painter.fillRect(self.rect(), bgColor)
-        painter.setPen(textColor)  # Set the pen color for text
+        painter.setPen(textColor)
 
-        circle_diameter = 80  # Diameter of the circle
-        border_thickness = 4
-        label_height = 20  # Height of the label text
-        padding = 10  # Padding between the circle and label
+        # Circle specs
+        circle_diameter = 80
+        grey_border_thickness = 6  # Grey border thickness
+        grey_color = QColor(200, 200, 200)
 
-        # Calculate the vertical space including the circle, padding, and label height
-        vertical_space_needed = circle_diameter + padding + label_height
-        # Calculate the top position for the circle to vertically center it
-        circle_top = (self.height() - vertical_space_needed) // 2
-
-        # Calculate the horizontal space and positions for the circles
-        horizontal_space = self.width() - (2 * circle_diameter)
-        circle_spacing = int(horizontal_space / 3)  # Spacing between circles
-
-        # Font for percentage
+        # Font and label setup
         percentage_font = self.font()
         percentage_font.setPointSize(12)
+        label_height = 20
+        padding = 10
 
-        # CPU Circle
-        cpu_rect = QRect(
-            circle_spacing,  # X position
-            circle_top,  # Y position
-            circle_diameter,
-            circle_diameter,
-        )
-        painter.setPen(
-            QPen(self.percentage_to_color(self.cpu_usage), border_thickness)
-        )  # Border color for CPU circle with thickness
-        painter.setBrush(Qt.transparent)  # Transparent fill
+        # Calculations for placement
+        vertical_space_needed = circle_diameter + padding + label_height
+        circle_top = (self.height() - vertical_space_needed) // 2
+        horizontal_space = self.width() - (2 * circle_diameter)
+        circle_spacing = int(horizontal_space / 3)
+
+        # Pens for the grey border and the fill
+        border_pen = QPen(grey_color, grey_border_thickness)
+        border_pen.setCapStyle(Qt.RoundCap)
+        painter.setPen(border_pen)
+
+        # Draw the grey border for CPU and RAM
+        cpu_rect = QRect(circle_spacing, circle_top, circle_diameter, circle_diameter)
         painter.drawEllipse(cpu_rect)
-        painter.setFont(percentage_font)
-        painter.setPen(textColor)  # Set the text color again for drawing text
-        painter.drawText(cpu_rect, Qt.AlignCenter, f"{self.cpu_usage}%")
 
-        label_cpu_rect = QRect(
-            cpu_rect.left(),  # Align with the left edge of the CPU circle
-            cpu_rect.bottom() + padding,  # Position below the CPU circle
-            circle_diameter,  # Same width as the circle
-            label_height,  # Height of the label
-        )
-        painter.setFont(self.font())
-        painter.drawText(label_cpu_rect, Qt.AlignCenter, "CPU")
-
-        # RAM Circle
         ram_rect = QRect(
             circle_spacing * 2 + circle_diameter,
             circle_top,
             circle_diameter,
             circle_diameter,
         )
-        painter.setPen(
-            QPen(self.percentage_to_color(self.ram_usage), border_thickness)
-        )  # Border color for RAM circle with thickness
-        painter.setBrush(Qt.transparent)  # Transparent fill
         painter.drawEllipse(ram_rect)
+
+        # Draw the filled arc for CPU and RAM
+        fill_pen = QPen()
+        fill_pen.setCapStyle(Qt.RoundCap)
+
+        # CPU Usage Arc
+        fill_pen.setColor(self.percentage_to_color(self.cpu_usage))
+        fill_pen.setWidth(grey_border_thickness)
+        painter.setPen(fill_pen)
+        angle = int(360 * self.cpu_usage / 100 * 16)
+        painter.drawArc(cpu_rect, 90 * 16, -angle)
+
+        # Draw CPU percentage text
+        painter.setPen(textColor)
         painter.setFont(percentage_font)
-        painter.setPen(textColor)  # Set the text color again for drawing text
+        painter.drawText(cpu_rect, Qt.AlignCenter, f"{self.cpu_usage}%")
+
+        # CPU Label
+        label_cpu_rect = QRect(
+            cpu_rect.left(), cpu_rect.bottom() + padding, circle_diameter, label_height
+        )
+        painter.drawText(label_cpu_rect, Qt.AlignCenter, "CPU")
+
+        # RAM Usage Arc
+        fill_pen.setColor(self.percentage_to_color(self.ram_usage))
+        painter.setPen(fill_pen)
+        angle = int(360 * self.ram_usage / 100 * 16)
+        painter.drawArc(ram_rect, 90 * 16, -angle)
+
+        # Draw RAM percentage text
+        painter.setPen(textColor)
+        painter.setFont(percentage_font)
         painter.drawText(ram_rect, Qt.AlignCenter, f"{self.ram_usage}%")
 
+        # RAM Label
         label_ram_rect = QRect(
-            ram_rect.left(),  # Align with the left edge of the RAM circle
-            ram_rect.bottom() + padding,  # Position below the RAM circle
-            circle_diameter,  # Same width as the circle
-            label_height,  # Height of the label
+            ram_rect.left(), ram_rect.bottom() + padding, circle_diameter, label_height
         )
-        painter.setFont(self.font())
         painter.drawText(label_ram_rect, Qt.AlignCenter, "RAM")
 
         painter.end()
