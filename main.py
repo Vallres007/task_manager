@@ -25,9 +25,9 @@ class CircleProgress(QWidget):
         super().__init__(parent)
         self.cpu_usage = 0
         self.ram_usage = 0
-        self.setFixedSize(240, 110)
+        self.setFixedSize(400, 150)
 
-        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
 
         # Start with a fully transparent widget
         self._opacity = 0
@@ -93,17 +93,28 @@ class CircleProgress(QWidget):
 
         circle_diameter = 80  # Diameter of the circle
         border_thickness = 4
+        label_height = 20  # Height of the label text
+        padding = 10  # Padding between the circle and label
+
+        # Calculate the vertical space including the circle, padding, and label height
+        vertical_space_needed = circle_diameter + padding + label_height
+        # Calculate the top position for the circle to vertically center it
+        circle_top = (self.height() - vertical_space_needed) // 2
+
+        # Calculate the horizontal space and positions for the circles
+        horizontal_space = self.width() - (2 * circle_diameter)
+        circle_spacing = int(horizontal_space / 3)  # Spacing between circles
 
         # Font for percentage
         percentage_font = self.font()
         percentage_font.setPointSize(12)
 
         # CPU Circle
-        cpu_rect = self.rect().adjusted(
-            10,
-            10,
-            -(self.width() - (10 + circle_diameter)),
-            -(self.height() - (10 + circle_diameter)),
+        cpu_rect = QRect(
+            circle_spacing,  # X position
+            circle_top,  # Y position
+            circle_diameter,
+            circle_diameter,
         )
         painter.setPen(
             QPen(self.percentage_to_color(self.cpu_usage), border_thickness)
@@ -114,16 +125,21 @@ class CircleProgress(QWidget):
         painter.setPen(textColor)  # Set the text color again for drawing text
         painter.drawText(cpu_rect, Qt.AlignCenter, f"{self.cpu_usage}%")
 
-        label_cpu_rect = QRect(10, 10 + circle_diameter, circle_diameter, 20)
+        label_cpu_rect = QRect(
+            cpu_rect.left(),  # Align with the left edge of the CPU circle
+            cpu_rect.bottom() + padding,  # Position below the CPU circle
+            circle_diameter,  # Same width as the circle
+            label_height,  # Height of the label
+        )
         painter.setFont(self.font())
         painter.drawText(label_cpu_rect, Qt.AlignCenter, "CPU")
 
         # RAM Circle
-        ram_rect = self.rect().adjusted(
-            130,
-            10,
-            -(self.width() - (130 + circle_diameter)),
-            -(self.height() - (10 + circle_diameter)),
+        ram_rect = QRect(
+            circle_spacing * 2 + circle_diameter,
+            circle_top,
+            circle_diameter,
+            circle_diameter,
         )
         painter.setPen(
             QPen(self.percentage_to_color(self.ram_usage), border_thickness)
@@ -134,7 +150,12 @@ class CircleProgress(QWidget):
         painter.setPen(textColor)  # Set the text color again for drawing text
         painter.drawText(ram_rect, Qt.AlignCenter, f"{self.ram_usage}%")
 
-        label_ram_rect = QRect(130, 10 + circle_diameter, circle_diameter, 20)
+        label_ram_rect = QRect(
+            ram_rect.left(),  # Align with the left edge of the RAM circle
+            ram_rect.bottom() + padding,  # Position below the RAM circle
+            circle_diameter,  # Same width as the circle
+            label_height,  # Height of the label
+        )
         painter.setFont(self.font())
         painter.drawText(label_ram_rect, Qt.AlignCenter, "RAM")
 
@@ -172,11 +193,9 @@ class SystemTrayApp(QSystemTrayIcon):
                     self.widget.activateWindow()
             else:
                 self.widget = CircleProgress()
-                tray_geometry = self.geometry()
-                x_position = (
-                    tray_geometry.x() - self.widget.width() + tray_geometry.width()
-                )
-                y_position = tray_geometry.y() - self.widget.height()
+                screen_geometry = QApplication.desktop().availableGeometry()
+                x_position = screen_geometry.right() - self.widget.width()
+                y_position = screen_geometry.bottom() - self.widget.height()
                 self.widget.move(x_position, y_position)
                 self.widget.showNormal()
                 self.widget.activateWindow()
