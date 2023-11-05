@@ -99,6 +99,8 @@ class CircleProgress(QWidget):
         # Font and label setup
         percentage_font = self.font()
         percentage_font.setPointSize(12)
+        label_font = self.font()
+        label_font.setPointSize(10)
         label_height = 20
         padding = 10
 
@@ -142,6 +144,7 @@ class CircleProgress(QWidget):
         painter.drawText(cpu_rect, Qt.AlignCenter, f"{self.cpu_usage}%")
 
         # CPU Label
+        painter.setFont(label_font)
         label_cpu_rect = QRect(
             cpu_rect.left(), cpu_rect.bottom() + padding, circle_diameter, label_height
         )
@@ -159,6 +162,7 @@ class CircleProgress(QWidget):
         painter.drawText(ram_rect, Qt.AlignCenter, f"{self.ram_usage}%")
 
         # RAM Label
+        painter.setFont(label_font)
         label_ram_rect = QRect(
             ram_rect.left(), ram_rect.bottom() + padding, circle_diameter, label_height
         )
@@ -206,7 +210,7 @@ class SystemTrayApp(QSystemTrayIcon):
                 self.widget.activateWindow()
 
     def update_stats(self):
-        cpu_usage = psutil.cpu_percent(interval=1)
+        cpu_usage = psutil.cpu_percent(interval=None)
         ram_usage = psutil.virtual_memory().percent
 
         # Check if widget exists before setting values
