@@ -25,6 +25,7 @@ class CircleProgress(QWidget):
         super().__init__(parent)
         self.cpu_usage = 0
         self.ram_usage = 0
+        self.disk_usage = 0
         self.setFixedSize(400, 150)
 
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint)
@@ -71,9 +72,10 @@ class CircleProgress(QWidget):
         red_component = int(2.55 * percentage)
         return QColor(red_component, green_component, 0, 150)
 
-    def setValues(self, cpu_value, ram_value):
+    def setValues(self, cpu_value, ram_value, disk_value):
         self.cpu_usage = cpu_value
         self.ram_usage = ram_value
+        self.disk_usage = disk_value
         self.update()  # Refresh the widget to reflect the new values.
 
     def paintEvent(self, event):
@@ -107,8 +109,8 @@ class CircleProgress(QWidget):
         # Calculations for placement
         vertical_space_needed = circle_diameter + padding + label_height
         circle_top = (self.height() - vertical_space_needed) // 2
-        horizontal_space = self.width() - (2 * circle_diameter)
-        circle_spacing = int(horizontal_space / 3)
+        horizontal_space = self.width() - (3 * circle_diameter)
+        circle_spacing = int(horizontal_space / 4)
 
         # Pens for the grey border and the fill
         border_pen = QPen(grey_color, grey_border_thickness)
@@ -126,6 +128,14 @@ class CircleProgress(QWidget):
             circle_diameter,
         )
         painter.drawEllipse(ram_rect)
+
+        disk_rect = QRect(
+            circle_spacing * 3 + circle_diameter * 2,
+            circle_top,
+            circle_diameter,
+            circle_diameter,
+        )
+        painter.drawEllipse(disk_rect)
 
         # Draw the filled arc for CPU and RAM
         fill_pen = QPen()
@@ -167,6 +177,27 @@ class CircleProgress(QWidget):
             ram_rect.left(), ram_rect.bottom() + padding, circle_diameter, label_height
         )
         painter.drawText(label_ram_rect, Qt.AlignCenter, "RAM")
+
+        # DISK Usage Arc
+        fill_pen.setColor(self.percentage_to_color(self.disk_usage))
+        painter.setPen(fill_pen)
+        angle = int(360 * self.disk_usage / 100 * 16)
+        painter.drawArc(disk_rect, 90 * 16, -angle)
+
+        # Draw Disk percentage text
+        painter.setPen(textColor)
+        painter.setFont(percentage_font)
+        painter.drawText(disk_rect, Qt.AlignCenter, f"{self.disk_usage}%")
+
+        # Disk Label
+        painter.setFont(label_font)
+        label_disk_rect = QRect(
+            disk_rect.left(),
+            disk_rect.bottom() + padding,
+            circle_diameter,
+            label_height,
+        )
+        painter.drawText(label_disk_rect, Qt.AlignCenter, "DISK")
 
         painter.end()
 
@@ -212,12 +243,13 @@ class SystemTrayApp(QSystemTrayIcon):
     def update_stats(self):
         cpu_usage = psutil.cpu_percent(interval=None)
         ram_usage = psutil.virtual_memory().percent
+        disk_usage = psutil.disk_usage("/").percent
 
         # Check if widget exists before setting values
         if self.widget is not None:
-            self.widget.setValues(cpu_usage, ram_usage)
+            self.widget.setValues(cpu_usage, ram_usage, disk_usage)
 
-        tooltip_text = f"CPU: {cpu_usage}%\nRAM: {ram_usage}%"
+        tooltip_text = f"CPU: {cpu_usage}%\nRAM: {ram_usage}%\nDISK: {disk_usage}%"
         self.setToolTip(tooltip_text)
 
 
@@ -228,3 +260,4 @@ if __name__ == "__main__":
     tray = SystemTrayApp(tray_icon)
     tray.show()
     sys.exit(app.exec_())
+    
